@@ -1,6 +1,6 @@
 import os
-import click
 import json
+import click
 
 from .common import Common
 from .settings import Settings

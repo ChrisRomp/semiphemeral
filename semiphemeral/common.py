@@ -82,14 +82,14 @@ class Common:
             "tweets_to_delete": len(tweets_to_delete),
         }
 
-    def get_tweets_to_delete(self, include_excluded=False):
+    def get_tweets_to_delete(self, include_excluded=False, ignore_date=False, sort_descending=False):
         """
         Returns a list of Tweet objects for tweets that should be deleted based
         on criteria in settings. This list includes tweets where exclude_from_delete=True,
         so it's important to manually exclude those before deleting
         """
         self.settings.load()
-        datetime_threshold = datetime.datetime.utcnow() - datetime.timedelta(
+        datetime_threshold = datetime.datetime.utcnow() if ignore_date else datetime.datetime.utcnow() - datetime.timedelta(
             days=self.settings.get("tweets_days_threshold")
         )
 
@@ -117,7 +117,8 @@ class Common:
         if not include_excluded:
             q = q.filter(Tweet.exclude_from_delete != True)
 
-        q = q.order_by(Tweet.created_at)
+        column_order = Tweet.created_at.desc() if sort_descending else Tweet.created_at
+        q = q.order_by(column_order)
 
         tweets = q.all()
         for tweet in tweets:

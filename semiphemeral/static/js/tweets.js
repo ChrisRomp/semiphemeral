@@ -1,7 +1,7 @@
 $(function () {
 
-  function change_state(q, page, count, replies) {
-    var new_state = { q: q, page: page, count: count, replies: replies };
+  function change_state(q, page, count, replies, desc) {
+    var new_state = { q: q, page: page, count: count, replies: replies, desc: desc };
     window.location = '#' + JSON.stringify(new_state);
   }
 
@@ -43,6 +43,7 @@ $(function () {
     var page = window.semiphemeral.state.page;
     var count = window.semiphemeral.state.count;
     var replies = window.semiphemeral.state.replies;
+    var sortDesc = window.semiphemeral.state.desc;
 
     // Build list of ids to filter
     var ids = [];
@@ -55,18 +56,23 @@ $(function () {
       }
     }
 
+    // Check for new first (descending sort)
+    if (sortDesc) {
+      ids.reverse();
+    }
+
     // Empty what previous page
     $('.info').empty();
     $('.tweets-to-delete').empty();
     $('.pagination').empty();
 
     // Display info
-    var num_pages = Math.ceil(ids.length / count);
+    var num_pages = (Math.ceil(ids.length / count) - 1);
     var info_string = 'Page ' + comma_formatted(page) + ' of ' + comma_formatted(num_pages) + ' - ';
     if (ids.length != window.semiphemeral.ids.length) {
       info_string += 'filtering to ' + comma_formatted(ids.length) + ' tweets - '
     }
-    info_string += comma_formatted(window.semiphemeral.ids.length) + ' tweets are staged for deletion';
+    info_string += comma_formatted(window.semiphemeral.ids.length) + ' tweets loaded';
     $('.info').append($('<div/>').html(info_string));
 
     // Pagination controls
@@ -75,7 +81,7 @@ $(function () {
       if (new_page == page) {
         $item.addClass('pagination-item-current').text(text);
       } else {
-        var new_state = { q: q, page: new_page, count: count, replies: true };
+        var new_state = { q: q, page: new_page, count: count, replies: true, desc: true };
         var $link = $('<a/>').attr('href', '#' + JSON.stringify(new_state)).text(text);
         $item.append($link);
       }
@@ -85,7 +91,8 @@ $(function () {
     if (page > 0) {
       add_pagination_item('Previous', page - 1);
     }
-    for (var i = page - 5; i < page + 5; i++) {
+    show_page_count = 8
+    for (var i = page - show_page_count; i < page + show_page_count; i++) {
       if (i >= 0 && i <= num_pages - 1) {
         add_pagination_item(i, i);
       }
@@ -150,7 +157,8 @@ $(function () {
         var hash = decodeURIComponent(window.location.hash).substr(1);
         window.semiphemeral.state = JSON.parse(hash);
         $('.filter input').val(window.semiphemeral.state.q);
-        $('.options input').prop('checked', window.semiphemeral.state.replies);
+        $('#ckShowReplies').prop('checked', window.semiphemeral.state.replies);
+        $('#ckDesc').prop('checked', window.semiphemeral.state.desc);
       } catch {
         console.log('parsing hash failed', hash);
         return false;
@@ -170,22 +178,31 @@ $(function () {
       var q = $(this).val();
       console.log('filtering on', q);
       if (q != window.semiphemeral.state.count) {
-        change_state(q, 0, window.semiphemeral.state.count, window.semiphemeral.state.replies);
+        change_state(q, 0, window.semiphemeral.state.count, window.semiphemeral.state.replies, window.semiphemeral.state.desc);
       }
     });
 
     // Toggling show replies
-    $('.options input').change(function () {
-      var replies = $('.options input').prop('checked') ? true : false;
+    $('#ckShowReplies').change(function () {
+      var replies = $('#ckShowReplies').prop('checked') ? true : false;
       console.log('show replies', replies);
       if (replies != window.semiphemeral.state.replies) {
-        change_state(window.semiphemeral.state.q, 0, window.semiphemeral.state.count, replies);
+        change_state(window.semiphemeral.state.q, 0, window.semiphemeral.state.count, replies, window.semiphemeral.state.desc);
+      }
+    });
+
+    // Toggling new first
+    $('#ckDesc').change(function () {
+      var desc = $('#ckDesc').prop('checked') ? true : false;
+      console.log('new first', desc);
+      if (desc != window.semiphemeral.state.desc) {
+        change_state(window.semiphemeral.state.q, 0, window.semiphemeral.state.count, window.semiphemeral.state.replies, desc);
       }
     });
 
     // Display tweets
     if (!parse_hash()) {
-      change_state("", 0, 50, true);
+      change_state("", 0, 50, true, true);
     }
   })
 })
